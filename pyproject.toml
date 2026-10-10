@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "minikv"
+version = "0.1.0"
+description = "Redis-совместимое key-value хранилище на чистом Python: RESP2/RESP3, TTL, LRU, транзакции, pub/sub, AOF"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Daniil Terpogosov" }]
+license = { text = "MIT" }
+dependencies = []  # только стандартная библиотека
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6", "redis>=5"]
+
+[project.scripts]
+minikv-server = "minikv.cli:server_main"
+minikv-cli = "minikv.cli:cli_main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003"]

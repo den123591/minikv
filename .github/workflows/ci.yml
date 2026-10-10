@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install ruff
+      - run: ruff check src tests scripts
+      - run: ruff format --check src tests scripts
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: pytest
+
+  redis-cli:
+    # Совместимость с настоящим redis-cli из пакета Redis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: sudo apt-get update && sudo apt-get install -y redis-tools
+      - run: pip install -e .
+      - run: |
+          minikv-server --port 6390 &
+          sleep 1
+          test "$(redis-cli -p 6390 PING)" = "PONG"
+          redis-cli -p 6390 SET greeting hello EX 100
+          test "$(redis-cli -p 6390 GET greeting)" = "hello"
+          redis-cli -p 6390 RPUSH q a b c
+          test "$(redis-cli -p 6390 LLEN q)" = "3"
+          redis-cli -p 6390 INFO keyspace | grep -q "keys=2"
+
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -e .
+      - run: |
+          python scripts/benchmark.py --clients 20 --requests 1000 --pipeline 1
+          python scripts/benchmark.py --clients 20 --requests 1000 --pipeline 32
